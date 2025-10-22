@@ -21,7 +21,7 @@ def validate_email(email):
         >>> validate_email("invalid-email")
         False
     """
-    # RFC 5322 compliant email regex pattern
+    
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(pattern, email) is not None
 
@@ -46,15 +46,15 @@ def validate_password(password):
         >>> validate_password("weak")
         (False, "Password must be at least 8 characters long")
     """
-    # Check minimum length requirement
+
     if len(password) < 8:
         return False, "Password must be at least 8 characters long"
     
-    # Check for at least one letter
+
     if not re.search(r'[A-Za-z]', password):
         return False, "Password must contain at least one letter"
     
-    # Check for at least one number
+    
     if not re.search(r'\d', password):
         return False, "Password must contain at least one number"
     
@@ -80,11 +80,11 @@ def validate_username(username):
         >>> validate_username("ab")
         (False, "Username must be between 3 and 20 characters")
     """
-    # Check length requirements
+    
     if len(username) < 3 or len(username) > 20:
         return False, "Username must be between 3 and 20 characters"
     
-    # Check allowed characters (alphanumeric and underscore only)
+    
     if not re.match(r'^[a-zA-Z0-9_]+$', username):
         return False, "Username can only contain letters, numbers, and underscores"
     
@@ -114,23 +114,23 @@ def validate_json_input(required_fields=None):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            # Check if request has JSON content type
+        
             if not request.is_json:
                 return jsonify({'error': 'Content-Type must be application/json'}), 400
             
-            # Parse JSON data from request body
+            
             data = request.get_json()
             if not data:
                 return jsonify({'error': 'Missing JSON data'}), 400
             
-            # Validate required fields if specified
+            
             if required_fields:
                 for field in required_fields:
-                    # Check if field exists and is not empty
+                    
                     if not data.get(field):
                         return jsonify({'error': f'{field} is required'}), 400
             
-            # If all validations pass, call the original function
+            
             return f(*args, **kwargs)
         return decorated_function
     return decorator
