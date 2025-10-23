@@ -9,6 +9,8 @@ from models import User, UserRole
 
 load_dotenv()
 
+
+
 def create_app():
     app = Flask(__name__)
     
@@ -88,4 +90,4 @@ if __name__ == "__main__":
                     print("Default admin user created")
         except Exception as e:
             print(f"Error creating admin user: {e}")
-    app.run(debug=False, port=5000)
+    app.run(debug=True, port=5000)
