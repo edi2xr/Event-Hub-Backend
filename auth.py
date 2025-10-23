@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request,make_response
 from models import User, UserRole, Club
 from flask_jwt_extended import (
     create_access_token, create_refresh_token, jwt_required, 
@@ -34,6 +34,8 @@ def role_required(*allowed_roles):
 @validate_json_input(['username', 'email', 'password', 'role'])
 def register_user():
     data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
     
     
     if not validate_email(data.get('email')):
@@ -96,8 +98,6 @@ def register_user():
 @validate_json_input(['username', 'email', 'password'])
 def login():
     data = request.get_json()
-    
-    username = data.get('username')
     email = data.get('email')
     password = data.get('password')
     
@@ -105,35 +105,55 @@ def login():
     if not validate_email(email):
         return jsonify({'error': 'Invalid email format'}), 400
     
-    user = User.get_user_by_username(username)
     
-    if not user or user.email != email or not user.check_password(password):
+    user = User.get_user_by_email(email)
+    if not user or not user.check_password(password):
         return jsonify({'error': 'Invalid credentials'}), 401
-    
+
     if not user.is_active:
-        return jsonify({'error': 'Account is deactivated'}), 401
-    
-    # Create tokens with user info
+        return jsonify({'error': 'Account deactivated'}), 403
+
     additional_claims = {
         'role': user.role.value,
         'user_id': user.id,
         'subscription_active': user.is_subscription_active() if user.role == UserRole.LEADER else None
     }
-    
-    access_token = create_access_token(
-        identity=user.username,
-        additional_claims=additional_claims
-    )
-    refresh_token = create_refresh_token(identity=user.username)
-    
-    return jsonify({
+
+    access_token = create_access_token(identity=user.id, additional_claims=additional_claims)
+    refresh_token = create_refresh_token(identity=user.id)
+
+    response = make_response(jsonify({
         'message': 'Login successful',
         'user': user.to_dict(),
-        'tokens': {
-            'access': access_token,
-            'refresh': refresh_token
-        }
-    }), 200
+    }))
+
+    # ---- Secure Cookie Settings ----
+    response.set_cookie(
+        'access_token',
+        access_token,
+        httponly=True,
+        secure=True,         
+        samesite='None',
+        max_age=3600         
+    )
+    response.set_cookie(
+        'refresh_token',
+        refresh_token,
+        httponly=True,
+        secure=True,
+        samesite='None',
+        max_age=7 * 24 * 3600  
+    )
+
+    return response
+@auth_bp.post('/logout')
+def logout():
+    response = make_response(jsonify({'message': 'Logged out successfully'}))
+    response.delete_cookie('access_token')
+    response.delete_cookie('refresh_token')
+    return response
+
+
 
 @auth_bp.post('/refresh')
 @jwt_required(refresh=True)
@@ -171,7 +191,7 @@ def get_profile():
 @auth_bp.post('/subscribe')
 @role_required(UserRole.LEADER)
 def subscribe_leader():
-    """Activate leader subscription (M-Pesa integration would go here)"""
+    """Activate leader subscription (M-Pesa integration should go here)"""
     current_user = get_jwt_identity()
     user = User.get_user_by_username(current_user)
     
