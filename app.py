@@ -1,10 +1,11 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from dotenv import load_dotenv
 import os
 from datetime import datetime, timedelta, timezone
 from extension import db, jwt, migrate
 from auth import auth_bp
+from events import events_bp
 from models import User, UserRole
 
 load_dotenv()
@@ -22,12 +23,21 @@ def create_app():
         raise ValueError("JWT_SECRET_KEY environment variable is required")
     app.config["JWT_SECRET_KEY"] = jwt_secret
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
+    app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=7)
+    app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
+    app.config["JWT_COOKIE_CSRF_PROTECT"] = False
+    app.config["JWT_ACCESS_COOKIE_NAME"] = "access_token"
+    app.config["JWT_REFRESH_COOKIE_NAME"] = "refresh_token"
+    app.config["JWT_COOKIE_SAMESITE"] = None
+    app.config["JWT_COOKIE_SECURE"] = False
+    app.config["JWT_COOKIE_PATH"] = "/"
+    app.config["JWT_SESSION_COOKIE"] = False
     
     
     db.init_app(app)
     jwt.init_app(app)
     migrate.init_app(app, db)
-    CORS(app,origins=["http://localhost:5173", "http://127.0.0.1:5000"], supports_credentials=True)
+    CORS(app, origins=["http://localhost:5173", "http://localhost:5000"], supports_credentials=True, allow_headers=["Content-Type", "Authorization"])
     
     
     @jwt.expired_token_loader
@@ -44,6 +54,7 @@ def create_app():
     
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    app.register_blueprint(events_bp, url_prefix='/api/events')
     
     @app.route("/")
     def home():
@@ -52,10 +63,14 @@ def create_app():
             "version": "1.0.0",
             "endpoints": {
                 "auth": "/api/auth",
+                "events": "/api/events",
                 "signup": "/api/auth/signup",
                 "login": "/api/auth/login",
                 "profile": "/api/auth/profile",
-                "subscribe": "/api/auth/subscribe"
+                "subscribe": "/api/auth/subscribe",
+                "create_event": "/api/events/create",
+                "all_events": "/api/events/all",
+                "purchase_ticket": "/api/events/<event_id>/purchase-ticket"
             }
         })
     

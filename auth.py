@@ -1,8 +1,9 @@
-from flask import Blueprint, jsonify, request,make_response
+from flask import Blueprint, jsonify, request, make_response
 from models import User, UserRole, Club
 from flask_jwt_extended import (
     create_access_token, create_refresh_token, jwt_required, 
-    get_jwt_identity, get_jwt
+    get_jwt_identity, get_jwt, set_access_cookies, set_refresh_cookies,
+    unset_jwt_cookies
 )
 from functools import wraps
 from datetime import datetime
@@ -10,18 +11,16 @@ from utils import validate_email, validate_password, validate_username, validate
 
 auth_bp = Blueprint('auth', __name__)
 
-
 def role_required(*allowed_roles):
     def decorator(f):
         @wraps(f)
         @jwt_required()
         def decorated_function(*args, **kwargs):
-            current_user_username = get_jwt_identity()
-            user = User.get_user_by_username(current_user_username)
+            current_user_id = get_jwt_identity()
+            user = User.query.get(current_user_id)
             
             if not user or user.role not in allowed_roles:
                 return jsonify({'error': 'Access denied'}), 403
-            
             
             if user.role == UserRole.LEADER and not user.is_subscription_active():
                 return jsonify({'error': 'Subscription expired. Please renew to continue.'}), 403
@@ -37,7 +36,6 @@ def register_user():
     email = data.get('email')
     password = data.get('password')
     
-    
     if not validate_email(data.get('email')):
         return jsonify({'error': 'Invalid email format'}), 400
     
@@ -45,11 +43,9 @@ def register_user():
     if not is_valid:
         return jsonify({'error': message}), 400
     
-    
     is_valid, message = validate_password(data.get('password'))
     if not is_valid:
         return jsonify({'error': message}), 400
-    
     
     if User.get_user_by_username(data.get('username')):
         return jsonify({'error': 'Username already exists'}), 400
@@ -57,12 +53,10 @@ def register_user():
     if User.get_user_by_email(data.get('email')):
         return jsonify({'error': 'Email already exists'}), 400
     
-    
     try:
         role = UserRole(data.get('role'))
     except ValueError:
         return jsonify({'error': 'Invalid role. Must be admin, leader, or user'}), 400
-    
     
     new_user = User(
         username=data.get('username'),
@@ -70,12 +64,10 @@ def register_user():
         role=role
     )
     
-    
     if role == UserRole.LEADER:
         if not data.get('club_name'):
             return jsonify({'error': 'Club name is required for leaders'}), 400
         new_user.club_name = data.get('club_name')
-    
     
     if role == UserRole.USER and data.get('club_access_code'):
         leader = User.get_leader_by_club_code(data.get('club_access_code'))
@@ -95,18 +87,17 @@ def register_user():
     }), 201
 
 @auth_bp.post('/login')
-@validate_json_input(['username', 'email', 'password'])
+@validate_json_input(['username', 'password'])
 def login():
     data = request.get_json()
-    email = data.get('email')
+    username = data.get('username')
     password = data.get('password')
     
+    is_valid, message = validate_username(username)
+    if not is_valid:
+        return jsonify({'error': message}), 400
     
-    if not validate_email(email):
-        return jsonify({'error': 'Invalid email format'}), 400
-    
-    
-    user = User.get_user_by_email(email)
+    user = User.get_user_by_username(username)
     if not user or not user.check_password(password):
         return jsonify({'error': 'Invalid credentials'}), 401
 
@@ -127,39 +118,22 @@ def login():
         'user': user.to_dict(),
     }))
 
-    # ---- Secure Cookie Settings ----
-    response.set_cookie(
-        'access_token',
-        access_token,
-        httponly=True,
-        secure=True,         
-        samesite='None',
-        max_age=3600         
-    )
-    response.set_cookie(
-        'refresh_token',
-        refresh_token,
-        httponly=True,
-        secure=True,
-        samesite='None',
-        max_age=7 * 24 * 3600  
-    )
+    set_access_cookies(response, access_token)
+    set_refresh_cookies(response, refresh_token)
 
     return response
+
 @auth_bp.post('/logout')
 def logout():
     response = make_response(jsonify({'message': 'Logged out successfully'}))
-    response.delete_cookie('access_token')
-    response.delete_cookie('refresh_token')
+    unset_jwt_cookies(response)
     return response
-
-
 
 @auth_bp.post('/refresh')
 @jwt_required(refresh=True)
 def refresh():
-    current_user = get_jwt_identity()
-    user = User.get_user_by_username(current_user)
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
     
     if not user:
         return jsonify({'error': 'User not found'}), 404
@@ -170,18 +144,21 @@ def refresh():
         'subscription_active': user.is_subscription_active() if user.role == UserRole.LEADER else None
     }
     
-    new_token = create_access_token(
-        identity=current_user,
+    new_access_token = create_access_token(
+        identity=current_user_id,
         additional_claims=additional_claims
     )
     
-    return jsonify({'access_token': new_token}), 200
+    response = make_response(jsonify({'message': 'Token refreshed successfully'}))
+    set_access_cookies(response, new_access_token)
+    
+    return response, 200
 
 @auth_bp.get('/profile')
 @jwt_required()
 def get_profile():
-    current_user = get_jwt_identity()
-    user = User.get_user_by_username(current_user)
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
     
     if not user:
         return jsonify({'error': 'User not found'}), 404
@@ -189,13 +166,16 @@ def get_profile():
     return jsonify({'user': user.to_dict()}), 200
 
 @auth_bp.post('/subscribe')
-@role_required(UserRole.LEADER)
+@jwt_required()
 def subscribe_leader():
-    """Activate leader subscription (M-Pesa integration should go here)"""
-    current_user = get_jwt_identity()
-    user = User.get_user_by_username(current_user)
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
     
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
     
+    if user.role != UserRole.LEADER:
+        return jsonify({'error': 'Only leaders can subscribe'}), 403
     
     try:
         user.activate_subscription()
@@ -212,9 +192,11 @@ def subscribe_leader():
 @auth_bp.get('/club-members')
 @role_required(UserRole.LEADER)
 def get_club_members():
-    """Get all members of the leader's club"""
-    current_user = get_jwt_identity()
-    leader = User.get_user_by_username(current_user)
+    current_user_id = get_jwt_identity()
+    leader = User.query.get(current_user_id)
+    
+    if not leader:
+        return jsonify({'error': 'Leader not found'}), 404
     
     try:
         members = User.query.filter_by(leader_id=leader.id).all()
@@ -230,7 +212,6 @@ def get_club_members():
 @auth_bp.get('/users')
 @role_required(UserRole.ADMIN)
 def get_all_users():
-    """Admin endpoint to get all users"""
     try:
         users = User.query.all()
     except Exception as e:
@@ -242,8 +223,6 @@ def get_all_users():
 @auth_bp.patch('/users/<user_id>/toggle-status')
 @role_required(UserRole.ADMIN)
 def toggle_user_status(user_id):
-    """Admin endpoint to activate/deactivate users"""
-    
     if not user_id or not user_id.strip() or '/' in user_id or '\\' in user_id:
         return jsonify({'error': 'Invalid user ID'}), 400
         

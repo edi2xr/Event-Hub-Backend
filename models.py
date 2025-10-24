@@ -41,7 +41,12 @@ class User(db.Model):
     def is_subscription_active(self):
         if self.role != UserRole.LEADER:
             return False
-        return self.subscription_active and self.subscription_expires_at and self.subscription_expires_at > datetime.now(timezone.utc)
+        if not self.subscription_active or not self.subscription_expires_at:
+            return False
+        expires_at = self.subscription_expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        return expires_at > datetime.now(timezone.utc)
     
     def activate_subscription(self, duration_days=30):
         self.subscription_active = True
@@ -129,6 +134,130 @@ class Club(db.Model):
             'access_code': self.access_code,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'is_active': self.is_active
+        }
+    
+    def save(self):
+        try:
+            db.session.add(self)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
+    
+    def delete(self):
+        try:
+            db.session.delete(self)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
+
+class EventStatus(Enum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    CANCELLED = "cancelled"
+
+class Event(db.Model):
+    __tablename__ = "events"
+    id = db.Column(db.String(), primary_key=True, default=lambda: str(uuid4()))
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text())
+    event_date = db.Column(db.DateTime, nullable=False)
+    location = db.Column(db.String(200))
+    ticket_price = db.Column(db.Float, default=0.0)
+    max_attendees = db.Column(db.Integer, nullable=True)
+    banner_url = db.Column(db.String(500), nullable=True)
+    status = db.Column(db.Enum(EventStatus), default=EventStatus.PENDING, nullable=False)
+    
+    leader_id = db.Column(db.String(), db.ForeignKey('users.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    
+    leader = db.relationship('User', backref='events', foreign_keys=[leader_id])
+    tickets = db.relationship('Ticket', backref='event', lazy='dynamic', cascade='all, delete-orphan')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'title': self.title,
+            'description': self.description,
+            'event_date': self.event_date.isoformat() if self.event_date else None,
+            'location': self.location,
+            'ticket_price': self.ticket_price,
+            'max_attendees': self.max_attendees,
+            'banner_url': self.banner_url,
+            'status': self.status.value,
+            'leader_id': self.leader_id,
+            'leader_name': self.leader.username if self.leader else None,
+            'club_name': self.leader.club_name if self.leader and self.leader.role == UserRole.LEADER else None,
+            'tickets_sold': self.tickets.count(),
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+    
+    def save(self):
+        try:
+            db.session.add(self)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
+    
+    def delete(self):
+        try:
+            db.session.delete(self)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
+
+class PaymentStatus(Enum):
+    PENDING = "pending"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    REFUNDED = "refunded"
+
+class Ticket(db.Model):
+    __tablename__ = "tickets"
+    id = db.Column(db.String(), primary_key=True, default=lambda: str(uuid4()))
+    event_id = db.Column(db.String(), db.ForeignKey('events.id'), nullable=False)
+    user_id = db.Column(db.String(), db.ForeignKey('users.id'), nullable=False)
+    
+    ticket_price = db.Column(db.Float, nullable=False)
+    commission = db.Column(db.Float, nullable=False)
+    total_amount = db.Column(db.Float, nullable=False)
+    
+    payment_status = db.Column(db.Enum(PaymentStatus), default=PaymentStatus.PENDING, nullable=False)
+    mpesa_receipt = db.Column(db.String(100), nullable=True)
+    payment_phone = db.Column(db.String(20), nullable=True)
+    
+    purchased_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    
+    user = db.relationship('User', backref='tickets', foreign_keys=[user_id])
+    
+    @staticmethod
+    def calculate_commission(price):
+        return round(price * 0.05, 2)
+    
+    @staticmethod
+    def calculate_total(price):
+        commission = Ticket.calculate_commission(price)
+        return round(price + commission, 2)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'event_id': self.event_id,
+            'event_title': self.event.title if self.event else None,
+            'user_id': self.user_id,
+            'username': self.user.username if self.user else None,
+            'ticket_price': self.ticket_price,
+            'commission': self.commission,
+            'total_amount': self.total_amount,
+            'payment_status': self.payment_status.value,
+            'mpesa_receipt': self.mpesa_receipt,
+            'purchased_at': self.purchased_at.isoformat() if self.purchased_at else None
         }
     
     def save(self):
