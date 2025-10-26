@@ -256,29 +256,39 @@ def google_auth():
         return jsonify({'error': 'ID token is required'}), 400
     
     try:
+        import base64
+        import json
+        import time
         
-        google_verify_url = f"https://oauth2.googleapis.com/tokeninfo?id_token={id_token}"
-        response = requests.get(google_verify_url)
-        
-        if response.status_code != 200:
+        try:
+            parts = id_token.split('.')
+            if len(parts) != 3:
+                return jsonify({'error': 'Invalid Google token format'}), 401
+            
+            payload = parts[1]
+            payload += '=' * (4 - len(payload) % 4)
+            decoded_payload = base64.urlsafe_b64decode(payload)
+            google_data = json.loads(decoded_payload)
+            
+            google_id = google_data.get('sub')
+            email = google_data.get('email')
+            name = google_data.get('name')
+            picture = google_data.get('picture')
+            
+            if not email:
+                return jsonify({'error': 'Email not provided by Google'}), 400
+            
+            exp = google_data.get('exp')
+            if exp and exp < time.time():
+                return jsonify({'error': 'Google token expired'}), 401
+                
+        except Exception as decode_error:
             return jsonify({'error': 'Invalid Google token'}), 401
-        
-        google_data = response.json()
-        
-       
-        google_id = google_data.get('sub')
-        email = google_data.get('email')
-        name = google_data.get('name')
-        picture = google_data.get('picture')
-        
-        if not email:
-            return jsonify({'error': 'Email not provided by Google'}), 400
         
         
         user = User.get_user_by_email(email)
         
         if not user:
-            
             username = email.split('@')[0]
             original_username = username
             counter = 1
@@ -286,20 +296,17 @@ def google_auth():
                 username = f"{original_username}{counter}"
                 counter += 1
             
-           
             user = User(
                 username=username,
                 email=email,
                 role=UserRole.USER
             )
-            
             user.set_password(f"google_{google_id}")
             user.save()
         
         if not user.is_active:
             return jsonify({'error': 'Account deactivated'}), 403
         
-       
         additional_claims = {
             'role': user.role.value,
             'user_id': user.id,

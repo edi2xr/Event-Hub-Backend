@@ -28,8 +28,8 @@ def create_app():
     app.config["JWT_COOKIE_CSRF_PROTECT"] = False
     app.config["JWT_ACCESS_COOKIE_NAME"] = "access_token"
     app.config["JWT_REFRESH_COOKIE_NAME"] = "refresh_token"
-    app.config["JWT_COOKIE_SAMESITE"] = None
-    app.config["JWT_COOKIE_SECURE"] = False
+    app.config["JWT_COOKIE_SAMESITE"] = "None"
+    app.config["JWT_COOKIE_SECURE"] = True
     app.config["JWT_COOKIE_PATH"] = "/"
     app.config["JWT_SESSION_COOKIE"] = False
     
@@ -37,7 +37,18 @@ def create_app():
     db.init_app(app)
     jwt.init_app(app)
     migrate.init_app(app, db)
-    CORS(app, origins=["http://localhost:5173", "http://localhost:5000"], supports_credentials=True, allow_headers=["Content-Type", "Authorization"])
+
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    app.register_blueprint(events_bp, url_prefix='/api/events')
+    
+    CORS(app, origins=[
+        "https://eventhub-4b919.web.app", 
+        "http://192.168.100.89:5173", 
+        "http://localhost:5173",
+        "https://f742e55ac8b6.ngrok-free.app",
+        "https://cationic-nonhabitually-joella.ngrok-free.dev",
+        "https://gentle-shortbread-b2cd87.netlify.app"
+    ], supports_credentials=True, allow_headers=["Content-Type", "Authorization", "ngrok-skip-browser-warning"])
     
     
     @jwt.expired_token_loader
@@ -53,8 +64,7 @@ def create_app():
         return jsonify({'error': 'Authorization token is required'}), 401
     
     
-    app.register_blueprint(auth_bp, url_prefix='/api/auth')
-    app.register_blueprint(events_bp, url_prefix='/api/events')
+    
     
     @app.route("/")
     def home():
