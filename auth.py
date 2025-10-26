@@ -8,6 +8,7 @@ from flask_jwt_extended import (
 from functools import wraps
 from datetime import datetime
 from utils import validate_email, validate_password, validate_username, validate_json_input
+import requests
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -244,3 +245,81 @@ def toggle_user_status(user_id):
         'message': f'User {"activated" if user.is_active else "deactivated"} successfully',
         'user': user.to_dict()
     }), 200
+
+@auth_bp.post('/google-auth')
+@validate_json_input(['id_token'])
+def google_auth():
+    data = request.get_json()
+    id_token = data.get('id_token')
+    
+    if not id_token:
+        return jsonify({'error': 'ID token is required'}), 400
+    
+    try:
+        
+        google_verify_url = f"https://oauth2.googleapis.com/tokeninfo?id_token={id_token}"
+        response = requests.get(google_verify_url)
+        
+        if response.status_code != 200:
+            return jsonify({'error': 'Invalid Google token'}), 401
+        
+        google_data = response.json()
+        
+       
+        google_id = google_data.get('sub')
+        email = google_data.get('email')
+        name = google_data.get('name')
+        picture = google_data.get('picture')
+        
+        if not email:
+            return jsonify({'error': 'Email not provided by Google'}), 400
+        
+        
+        user = User.get_user_by_email(email)
+        
+        if not user:
+            
+            username = email.split('@')[0]
+            original_username = username
+            counter = 1
+            while User.get_user_by_username(username):
+                username = f"{original_username}{counter}"
+                counter += 1
+            
+           
+            user = User(
+                username=username,
+                email=email,
+                role=UserRole.USER
+            )
+            
+            user.set_password(f"google_{google_id}")
+            user.save()
+        
+        if not user.is_active:
+            return jsonify({'error': 'Account deactivated'}), 403
+        
+       
+        additional_claims = {
+            'role': user.role.value,
+            'user_id': user.id,
+            'subscription_active': user.is_subscription_active() if user.role == UserRole.LEADER else None
+        }
+        
+        access_token = create_access_token(identity=user.id, additional_claims=additional_claims)
+        refresh_token = create_refresh_token(identity=user.id)
+        
+        response = make_response(jsonify({
+            'message': 'Google authentication successful',
+            'user': user.to_dict(),
+        }))
+        
+        set_access_cookies(response, access_token)
+        set_refresh_cookies(response, refresh_token)
+        
+        return response
+        
+    except requests.RequestException:
+        return jsonify({'error': 'Failed to verify Google token'}), 500
+    except Exception as e:
+        return jsonify({'error': 'Authentication failed'}), 500
