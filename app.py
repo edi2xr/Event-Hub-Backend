@@ -43,11 +43,9 @@ def create_app():
     
     CORS(app, origins=[
         "https://eventhub-4b919.web.app", 
-        "http://192.168.100.89:5173", 
+        "http://172.30.39.117:5173", 
         "http://localhost:5173",
-        "https://f742e55ac8b6.ngrok-free.app",
-        "https://cationic-nonhabitually-joella.ngrok-free.dev",
-        "https://gentle-shortbread-b2cd87.netlify.app"
+        "https://cationic-nonhabitually-joella.ngrok-free.dev"
     ], supports_credentials=True, allow_headers=["Content-Type", "Authorization", "ngrok-skip-browser-warning"])
     
     
@@ -115,4 +113,4 @@ if __name__ == "__main__":
                     print("Default admin user created")
         except Exception as e:
             print(f"Error creating admin user: {e}")
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5000,host="0.0.0.0")
