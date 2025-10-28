@@ -1,0 +1,3 @@
+# Core Flask Framework
+Flask==3.0
+""
