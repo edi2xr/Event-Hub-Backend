@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from app import db
+from database import db
 from backend.models.models import Payment, Event, PaymentStatus
 from backend.services.mpesa import MpesaService
 import uuid

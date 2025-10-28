@@ -1,38 +1,28 @@
 from flask import Flask
 from flask_cors import CORS
-from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from database import db
 import os
 
-# Initialize extensions
-db = SQLAlchemy()
-migrate = Migrate()
+app = Flask(__name__)
+CORS(app)
 
-def create_app():
-    app = Flask(__name__)
-    CORS(app)
-    
-    # Database configuration
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///eventhub.db')
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
-    
-    # Initialize extensions with app
-    db.init_app(app)
-    migrate.init_app(app, db)
-    
-    # Import models
-    from backend.models.models import Event, Payment, Ticket
-    
-    # Import and register routes
-    from backend.routes import payments, tickets, events
-    app.register_blueprint(payments.bp)
-    app.register_blueprint(tickets.bp)
-    app.register_blueprint(events.bp)
-    
-    return app
+# Database configuration
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///eventhub.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
 
-app = create_app()
+db.init_app(app)
+migrate = Migrate(app, db)
+
+# Import models after db is initialized
+from backend.models.models import Event, Payment, Ticket
+
+# Import and register routes
+from backend.routes import payments, tickets, events
+app.register_blueprint(payments.bp)
+app.register_blueprint(tickets.bp)
+app.register_blueprint(events.bp)
 
 if __name__ == '__main__':
     with app.app_context():

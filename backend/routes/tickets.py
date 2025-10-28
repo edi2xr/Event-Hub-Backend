@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from app import db
+from database import db
 from backend.models.models import Ticket, Payment, Event, PaymentStatus, TicketStatus
 import random
 import string

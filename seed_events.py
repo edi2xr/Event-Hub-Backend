@@ -1,9 +1,9 @@
-from app import create_app, db
+from app import app
+from database import db
 from backend.models.models import Event
 from datetime import datetime, timedelta
 
 def seed_events():
-    app = create_app()
     with app.app_context():
         # Clear existing events
         Event.query.delete()
