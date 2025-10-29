@@ -12,23 +12,17 @@ payments_bp = Blueprint('payments', __name__)
 
 class MpesaService:
     def __init__(self):
-        self.consumer_key = os.environ.get('MPESA_CONSUMER_KEY')
-        self.consumer_secret = os.environ.get('MPESA_CONSUMER_SECRET')
+        self.consumer_key = os.environ.get('MPESA_CONSUMER_KEY', 'uWdCJRpKfhl1n9O3glfHa3jtmIQTYBBW82qYNxMzRHGYHuTx')
+        self.consumer_secret = os.environ.get('MPESA_CONSUMER_SECRET', '8dXMT15CFXNTDsTNcKXtKxo4MI4Fhuf3egAgs4gydTkuTnVFQBhCl1pGHCmJevCX')
         self.business_short_code = os.environ.get('MPESA_SHORTCODE', '174379')
-        self.passkey = os.environ.get('MPESA_PASSKEY')
+        self.passkey = os.environ.get('MPESA_PASSKEY', 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919')
         self.callback_url = os.environ.get('MPESA_CALLBACK_URL', 'https://your-domain.com/api/payments/callback')
-        self.base_url = 'https://sandbox.safaricom.co.ke' if os.environ.get('MPESA_ENV') == 'sandbox' else 'https://api.safaricom.co.ke'
+        self.base_url = 'https://sandbox.safaricom.co.ke'
 
     def get_access_token(self):
         url = f"{self.base_url}/oauth/v1/generate?grant_type=client_credentials"
-        credentials = base64.b64encode(f"{self.consumer_key}:{self.consumer_secret}".encode()).decode()
         
-        headers = {
-            'Authorization': f'Basic {credentials}',
-            'Content-Type': 'application/json'
-        }
-        
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, auth=(self.consumer_key, self.consumer_secret))
         return response.json().get('access_token')
 
     def generate_password(self):
@@ -52,7 +46,7 @@ class MpesaService:
             "Password": password,
             "Timestamp": timestamp,
             "TransactionType": "CustomerPayBillOnline",
-            "Amount": int(amount),
+            "Amount": int(round(float(amount))),
             "PartyA": phone_number,
             "PartyB": self.business_short_code,
             "PhoneNumber": phone_number,
