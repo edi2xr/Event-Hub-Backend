@@ -37,9 +37,12 @@ def create_event():
         description=data.get('description'),
         event_date=event_date,
         location=data.get('location'),
-        ticket_price=float(data.get('ticket_price', 0)),
+        ticket_price=max(0, float(data.get('ticket_price', 0))),
+        vip_price=max(0, float(data.get('vip_price'))) if data.get('vip_price') else None,
+        vvip_price=max(0, float(data.get('vvip_price'))) if data.get('vvip_price') else None,
         max_attendees=data.get('max_attendees'),
         banner_url=data.get('banner_url'),
+        renewal_period=data.get('renewal_period', 'monthly'),
         leader_id=leader.id,
         status=EventStatus.PENDING
     )
@@ -52,6 +55,34 @@ def create_event():
         }), 201
     except Exception as e:
         return jsonify({'error': 'Failed to create event'}), 500
+
+@events_bp.get('/public')
+def get_public_events():
+    """Public endpoint for approved events - no authentication required"""
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    
+    query = Event.query.filter_by(status=EventStatus.APPROVED)
+    
+    paginated = query.order_by(Event.event_date.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    
+    events_data = []
+    for event in paginated.items:
+        event_dict = event.to_dict()
+        # Add club access code for join functionality
+        if event.leader and event.leader.club_access_code:
+            event_dict['club_access_code'] = event.leader.club_access_code
+        events_data.append(event_dict)
+    
+    return jsonify({
+        'events': events_data,
+        'total': paginated.total,
+        'page': paginated.page,
+        'per_page': paginated.per_page,
+        'pages': paginated.pages
+    }), 200
 
 @events_bp.get('/all')
 @jwt_required()
@@ -69,10 +100,8 @@ def get_all_events():
     query = Event.query
     
     if user.role == UserRole.USER:
-        if user.leader_id:
-            query = query.filter_by(leader_id=user.leader_id, status=EventStatus.APPROVED)
-        else:
-            return jsonify({'events': [], 'total': 0, 'page': page, 'per_page': per_page}), 200
+        # Show all approved events for users
+        query = query.filter_by(status=EventStatus.APPROVED)
     elif user.role == UserRole.LEADER:
         query = query.filter_by(leader_id=user.id)
     
@@ -86,8 +115,16 @@ def get_all_events():
         page=page, per_page=per_page, error_out=False
     )
     
+    events_data = []
+    for event in paginated.items:
+        event_dict = event.to_dict()
+        # Add club access code for join functionality
+        if event.leader and event.leader.club_access_code:
+            event_dict['club_access_code'] = event.leader.club_access_code
+        events_data.append(event_dict)
+    
     return jsonify({
-        'events': [event.to_dict() for event in paginated.items],
+        'events': events_data,
         'total': paginated.total,
         'page': paginated.page,
         'per_page': paginated.per_page,

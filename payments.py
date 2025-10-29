@@ -60,6 +60,34 @@ class MpesaService:
 
 mpesa = MpesaService()
 
+@payments_bp.post('/test-mpesa')
+def test_mpesa_payment():
+    data = request.get_json()
+    phone_number = data.get('phone_number')
+    amount = data.get('amount', 5)
+    
+    if not phone_number:
+        return jsonify({'error': 'Phone number required'}), 400
+    
+    try:
+        mpesa_response = mpesa.stk_push(
+            phone_number=phone_number,
+            amount=int(round(float(amount))),
+            account_reference="TEST123",
+            transaction_desc="Test Payment"
+        )
+        
+        if mpesa_response.get('ResponseCode') == '0':
+            return jsonify({
+                'message': 'Payment initiated successfully',
+                'checkout_request_id': mpesa_response.get('CheckoutRequestID')
+            }), 200
+        else:
+            return jsonify({'error': 'Payment initiation failed', 'response': mpesa_response}), 400
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @payments_bp.post('/initiate/<ticket_id>')
 @jwt_required()
 def initiate_payment(ticket_id):

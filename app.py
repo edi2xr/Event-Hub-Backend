@@ -7,6 +7,8 @@ from extension import db, jwt, migrate
 from auth import auth_bp
 from events import events_bp
 from payments import payments_bp
+from club_payments import club_bp
+from debug_events import debug_bp
 from models import User, UserRole
 
 load_dotenv()
@@ -42,12 +44,12 @@ def create_app():
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(events_bp, url_prefix='/api/events')
     app.register_blueprint(payments_bp, url_prefix='/api/payments')
+    app.register_blueprint(club_bp, url_prefix='/api')
+    app.register_blueprint(debug_bp, url_prefix='/api/debug')
     
     CORS(app, origins=[
-        "https://eventhub-4b919.web.app", 
-        "http://192.168.0.112:5000", 
         "http://localhost:5173",
-        "https://cationic-nonhabitually-joella.ngrok-free.dev"
+        "http://127.0.0.1:5173"
     ], supports_credentials=True, allow_headers=["Content-Type", "Authorization", "ngrok-skip-browser-warning"])
     
     
@@ -117,4 +119,4 @@ if __name__ == "__main__":
                     print("Default admin user created")
         except Exception as e:
             print(f"Error creating admin user: {e}")
-    app.run(debug=True, port=5000,host="0.0.0.0")
+    app.run(debug=True, port=8000, host="0.0.0.0")
