@@ -1,12 +1,13 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from flask_mail import Mail
 from dotenv import load_dotenv
 import os
 from datetime import datetime, timedelta, timezone
 from extension import db, jwt, migrate
 from auth import auth_bp
 from events import events_bp
-from models import User, UserRole
+
 
 load_dotenv()
 
@@ -32,11 +33,19 @@ def create_app():
     app.config["JWT_COOKIE_SECURE"] = True
     app.config["JWT_COOKIE_PATH"] = "/"
     app.config["JWT_SESSION_COOKIE"] = False
-    
-    
+
+    # Email configuration
+    app.config["MAIL_SERVER"] = os.getenv("MAIL_SERVER", "smtp.gmail.com")
+    app.config["MAIL_PORT"] = int(os.getenv("MAIL_PORT", 587))
+    app.config["MAIL_USE_TLS"] = os.getenv("MAIL_USE_TLS", "True").lower() == "true"
+    app.config["MAIL_USERNAME"] = os.getenv("MAIL_USERNAME")
+    app.config["MAIL_PASSWORD"] = os.getenv("MAIL_PASSWORD")
+    app.config["MAIL_DEFAULT_SENDER"] = os.getenv("MAIL_DEFAULT_SENDER", app.config["MAIL_USERNAME"])
+
     db.init_app(app)
     jwt.init_app(app)
     migrate.init_app(app, db)
+    mail = Mail(app)
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(events_bp, url_prefix='/api/events')

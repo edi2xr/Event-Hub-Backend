@@ -7,7 +7,7 @@ from flask_jwt_extended import (
 )
 from functools import wraps
 from datetime import datetime
-from utils import validate_email, validate_password, validate_username, validate_json_input
+from utils import validate_email, validate_password, validate_username, validate_json_input, send_subscription_email
 import requests
 
 auth_bp = Blueprint('auth', __name__)
@@ -181,9 +181,13 @@ def subscribe_leader():
     try:
         user.activate_subscription()
         user.save()
+
+        # Send confirmation email
+        send_subscription_email(user.email, user.club_name, user.subscription_expires_at)
+
     except Exception as e:
         return jsonify({'error': 'Failed to activate subscription'}), 500
-    
+
     return jsonify({
         'message': 'Subscription activated successfully',
         'club_access_code': user.club_access_code,

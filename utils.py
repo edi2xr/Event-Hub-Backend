@@ -4,6 +4,7 @@
 import re
 from functools import wraps
 from flask import jsonify, request
+from flask_mail import Message
 
 def validate_email(email):
     """
@@ -134,3 +135,43 @@ def validate_json_input(required_fields=None):
             return f(*args, **kwargs)
         return decorated_function
     return decorator
+
+def send_subscription_email(user_email, club_name, expires_at):
+    """
+    Send subscription confirmation email to leader.
+
+    Args:
+        user_email (str): Email address of the leader
+        club_name (str): Name of the club
+        expires_at (datetime): Subscription expiration date
+
+    Returns:
+        bool: True if email sent successfully, False otherwise
+    """
+    from app import mail  # Import here to avoid circular import
+
+    try:
+        subject = f"Subscription Activated - {club_name}"
+        body = f"""
+        Dear Leader,
+
+        Your subscription for {club_name} has been successfully activated!
+
+        Subscription Details:
+        - Club: {club_name}
+        - Expires on: {expires_at.strftime('%Y-%m-%d %H:%M:%S UTC') if expires_at else 'N/A'}
+
+        You can now create events and manage your club members.
+
+        Welcome to Event Hub!
+
+        Best regards,
+        Event Hub Team
+        """
+
+        msg = Message(subject=subject, recipients=[user_email], body=body)
+        mail.send(msg)
+        return True
+    except Exception as e:
+        print(f"Failed to send subscription email to {user_email}: {str(e)}")
+        return False
