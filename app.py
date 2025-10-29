@@ -1,3 +1,128 @@
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+from flask_mail import Mail
+from dotenv import load_dotenv
+import os
+from datetime import datetime, timedelta, timezone
+from extension import db, jwt, migrate
+from auth import auth_bp
+from events import events_bp
+
+
+load_dotenv()
+
+
+
+def create_app():
+    app = Flask(__name__)
+    
+    
+    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    jwt_secret = os.getenv("JWT_SECRET_KEY")
+    if not jwt_secret:
+        raise ValueError("JWT_SECRET_KEY environment variable is required")
+    app.config["JWT_SECRET_KEY"] = jwt_secret
+    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
+    app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=7)
+    app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
+    app.config["JWT_COOKIE_CSRF_PROTECT"] = False
+    app.config["JWT_ACCESS_COOKIE_NAME"] = "access_token"
+    app.config["JWT_REFRESH_COOKIE_NAME"] = "refresh_token"
+    app.config["JWT_COOKIE_SAMESITE"] = "None"
+    app.config["JWT_COOKIE_SECURE"] = True
+    app.config["JWT_COOKIE_PATH"] = "/"
+    app.config["JWT_SESSION_COOKIE"] = False
+
+    # Email configuration
+    app.config["MAIL_SERVER"] = os.getenv("MAIL_SERVER", "smtp.gmail.com")
+    app.config["MAIL_PORT"] = int(os.getenv("MAIL_PORT", 587))
+    app.config["MAIL_USE_TLS"] = os.getenv("MAIL_USE_TLS", "True").lower() == "true"
+    app.config["MAIL_USERNAME"] = os.getenv("MAIL_USERNAME")
+    app.config["MAIL_PASSWORD"] = os.getenv("MAIL_PASSWORD")
+    app.config["MAIL_DEFAULT_SENDER"] = os.getenv("MAIL_DEFAULT_SENDER", app.config["MAIL_USERNAME"])
+
+    db.init_app(app)
+    jwt.init_app(app)
+    migrate.init_app(app, db)
+    mail = Mail(app)
+
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    app.register_blueprint(events_bp, url_prefix='/api/events')
+    
+    CORS(app, origins=[
+        "https://eventhub-4b919.web.app", 
+        "http://192.168.0.112:5000", 
+        "http://localhost:5173",
+        "https://cationic-nonhabitually-joella.ngrok-free.dev"
+    ], supports_credentials=True, allow_headers=["Content-Type", "Authorization", "ngrok-skip-browser-warning"])
+    
+    
+    @jwt.expired_token_loader
+    def expired_token_callback(jwt_header, jwt_payload):
+        return jsonify({'error': 'Token has expired'}), 401
+    
+    @jwt.invalid_token_loader
+    def invalid_token_callback(error):
+        return jsonify({'error': 'Invalid token'}), 401
+    
+    @jwt.unauthorized_loader
+    def missing_token_callback(error):
+        return jsonify({'error': 'Authorization token is required'}), 401
+    
+    
+    
+    
+    @app.route("/")
+    def home():
+        return jsonify({
+            "message": "Event Hub API is running",
+            "version": "1.0.0",
+            "endpoints": {
+                "auth": "/api/auth",
+                "events": "/api/events",
+                "signup": "/api/auth/signup",
+                "login": "/api/auth/login",
+                "profile": "/api/auth/profile",
+                "subscribe": "/api/auth/subscribe",
+                "create_event": "/api/events/create",
+                "all_events": "/api/events/all",
+                "purchase_ticket": "/api/events/<event_id>/purchase-ticket"
+            }
+        })
+    
+    @app.route("/api/health")
+    def health_check():
+        try:
+            
+            db.session.execute(db.text('SELECT 1'))
+            return jsonify({"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()})
+        except Exception as e:
+            return jsonify({"status": "unhealthy", "error": "Database connection failed"}), 503
+    
+    return app
+
+if __name__ == "__main__":
+    app = create_app()
+    with app.app_context():
+        db.create_all()
+        
+        try:
+            admin = User.get_user_by_username('admin')
+            if not admin:
+                admin_password = os.getenv('ADMIN_PASSWORD')
+                if admin_password:
+                    admin = User(
+                        username=os.getenv('ADMIN_USERNAME', 'admin'),
+                        email=os.getenv('ADMIN_EMAIL', 'admin@eventhub.com'),
+                        role=UserRole.ADMIN
+                    )
+                    admin.set_password(admin_password)
+                    admin.save()
+                    print("Default admin user created")
+        except Exception as e:
+            print(f"Error creating admin user: {e}")
+    app.run(debug=True, port=5000,host="0.0.0.0")
 from flask import Flask
 from extensions import db, migrate, jwt, cors
 from API.admin import admin_bp
