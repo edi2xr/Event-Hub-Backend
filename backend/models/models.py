@@ -22,6 +22,7 @@ class Event(db.Model):
     price = db.Column(db.Float, nullable=False)
     total_tickets = db.Column(db.Integer, nullable=False)
     available_tickets = db.Column(db.Integer, nullable=False)
+    owner_phone = db.Column(db.String(15), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Payment(db.Model):
@@ -35,6 +36,16 @@ class Payment(db.Model):
     quantity = db.Column(db.Integer, nullable=False, default=1)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class Subscription(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    phone_number = db.Column(db.String(15), nullable=False)
+    amount = db.Column(db.Float, default=200.0)
+    status = db.Column(db.Enum(PaymentStatus), default=PaymentStatus.PENDING)
+    mpesa_receipt_number = db.Column(db.String(50))
+    checkout_request_id = db.Column(db.String(100))
+    expires_at = db.Column(db.DateTime, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Ticket(db.Model):
     id = db.Column(db.Integer, primary_key=True)
