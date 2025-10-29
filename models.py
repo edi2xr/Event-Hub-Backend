@@ -166,8 +166,11 @@ class Event(db.Model):
     event_date = db.Column(db.DateTime, nullable=False)
     location = db.Column(db.String(200))
     ticket_price = db.Column(db.Float, default=0.0)
+    vip_price = db.Column(db.Float, nullable=True)
+    vvip_price = db.Column(db.Float, nullable=True)
     max_attendees = db.Column(db.Integer, nullable=True)
     banner_url = db.Column(db.String(500), nullable=True)
+    renewal_period = db.Column(db.String(20), default='monthly')
     status = db.Column(db.Enum(EventStatus), default=EventStatus.PENDING, nullable=False)
     
     leader_id = db.Column(db.String(), db.ForeignKey('users.id'), nullable=False)
@@ -185,8 +188,11 @@ class Event(db.Model):
             'event_date': self.event_date.isoformat() if self.event_date else None,
             'location': self.location,
             'ticket_price': self.ticket_price,
+            'vip_price': self.vip_price,
+            'vvip_price': self.vvip_price,
             'max_attendees': self.max_attendees,
             'banner_url': self.banner_url,
+            'renewal_period': self.renewal_period,
             'status': self.status.value,
             'leader_id': self.leader_id,
             'leader_name': self.leader.username if self.leader else None,

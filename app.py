@@ -49,12 +49,13 @@ def create_app():
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(events_bp, url_prefix='/api/events')
+    app.register_blueprint(payments_bp, url_prefix='/api/payments')
+    app.register_blueprint(club_bp, url_prefix='/api')
+    app.register_blueprint(debug_bp, url_prefix='/api/debug')
     
     CORS(app, origins=[
-        "https://eventhub-4b919.web.app", 
-        "http://192.168.0.112:5000", 
         "http://localhost:5173",
-        "https://cationic-nonhabitually-joella.ngrok-free.dev"
+        "http://127.0.0.1:5173"
     ], supports_credentials=True, allow_headers=["Content-Type", "Authorization", "ngrok-skip-browser-warning"])
     
     
@@ -87,7 +88,9 @@ def create_app():
                 "subscribe": "/api/auth/subscribe",
                 "create_event": "/api/events/create",
                 "all_events": "/api/events/all",
-                "purchase_ticket": "/api/events/<event_id>/purchase-ticket"
+                "purchase_ticket": "/api/events/<event_id>/purchase-ticket",
+                "initiate_payment": "/api/payments/initiate/<ticket_id>",
+                "payment_status": "/api/payments/status/<ticket_id>"
             }
         })
     
