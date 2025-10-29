@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from extension import db, jwt, migrate
 from auth import auth_bp
 from events import events_bp
+from payments import payments_bp
 from models import User, UserRole
 
 load_dotenv()
@@ -40,6 +41,7 @@ def create_app():
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(events_bp, url_prefix='/api/events')
+    app.register_blueprint(payments_bp, url_prefix='/api/payments')
     
     CORS(app, origins=[
         "https://eventhub-4b919.web.app", 
@@ -78,7 +80,9 @@ def create_app():
                 "subscribe": "/api/auth/subscribe",
                 "create_event": "/api/events/create",
                 "all_events": "/api/events/all",
-                "purchase_ticket": "/api/events/<event_id>/purchase-ticket"
+                "purchase_ticket": "/api/events/<event_id>/purchase-ticket",
+                "initiate_payment": "/api/payments/initiate/<ticket_id>",
+                "payment_status": "/api/payments/status/<ticket_id>"
             }
         })
     
