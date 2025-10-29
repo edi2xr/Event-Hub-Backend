@@ -256,12 +256,12 @@ def purchase_ticket(event_id):
         new_ticket.save()
         
         return jsonify({
-            'message': 'Ticket purchase initiated. Please complete M-Pesa payment',
+            'message': 'Ticket created successfully. Use the payment endpoint to complete purchase',
             'ticket': new_ticket.to_dict(),
-            'payment_details': {
-                'amount': total_amount,
-                'phone': phone_number,
-                'instructions': 'You will receive an M-Pesa prompt on your phone'
+            'next_step': {
+                'endpoint': f'/api/payments/initiate/{new_ticket.id}',
+                'method': 'POST',
+                'description': 'Call this endpoint to initiate M-Pesa payment'
             }
         }), 201
     except Exception as e:
