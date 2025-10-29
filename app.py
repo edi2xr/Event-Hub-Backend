@@ -43,7 +43,7 @@ def create_app():
     
     CORS(app, origins=[
         "https://eventhub-4b919.web.app", 
-        "http://172.30.39.117:5173", 
+        "http://192.168.0.112:5000", 
         "http://localhost:5173",
         "https://cationic-nonhabitually-joella.ngrok-free.dev"
     ], supports_credentials=True, allow_headers=["Content-Type", "Authorization", "ngrok-skip-browser-warning"])
