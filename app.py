@@ -1,15 +1,13 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from flask_mail import Mail
 from dotenv import load_dotenv
 import os
 from datetime import datetime, timedelta, timezone
 from extension import db, jwt, migrate
 from auth import auth_bp
 from events import events_bp
-from payments import payments_bp
-from club_payments import club_bp
-from debug_events import debug_bp
-from models import User, UserRole
+
 
 load_dotenv()
 
@@ -35,11 +33,19 @@ def create_app():
     app.config["JWT_COOKIE_SECURE"] = True
     app.config["JWT_COOKIE_PATH"] = "/"
     app.config["JWT_SESSION_COOKIE"] = False
-    
-    
+
+    # Email configuration
+    app.config["MAIL_SERVER"] = os.getenv("MAIL_SERVER", "smtp.gmail.com")
+    app.config["MAIL_PORT"] = int(os.getenv("MAIL_PORT", 587))
+    app.config["MAIL_USE_TLS"] = os.getenv("MAIL_USE_TLS", "True").lower() == "true"
+    app.config["MAIL_USERNAME"] = os.getenv("MAIL_USERNAME")
+    app.config["MAIL_PASSWORD"] = os.getenv("MAIL_PASSWORD")
+    app.config["MAIL_DEFAULT_SENDER"] = os.getenv("MAIL_DEFAULT_SENDER", app.config["MAIL_USERNAME"])
+
     db.init_app(app)
     jwt.init_app(app)
     migrate.init_app(app, db)
+    mail = Mail(app)
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(events_bp, url_prefix='/api/events')
@@ -119,4 +125,37 @@ if __name__ == "__main__":
                     print("Default admin user created")
         except Exception as e:
             print(f"Error creating admin user: {e}")
-    app.run(debug=True, port=8000, host="0.0.0.0")
+    app.run(debug=True, port=5000,host="0.0.0.0")
+from flask import Flask
+from extensions import db, migrate, jwt, cors
+from API.admin import admin_bp
+import models  # ensures models are registered with SQLAlchemy
+
+def create_app():
+    app = Flask(__name__)
+
+    # Basic configuration
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///eventhub.db'
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['JWT_SECRET_KEY'] = 'super-secret-key'  # change this later
+
+    # Initialize extensions
+    db.init_app(app)
+    migrate.init_app(app, db)
+    jwt.init_app(app)
+    cors.init_app(app)
+
+    # Register blueprints
+    app.register_blueprint(admin_bp, url_prefix='/admin')
+
+    @app.route('/')
+    def home():
+        return {"message": "Welcome to Event Hub API 🎉"}
+
+    return app
+
+
+# Entry point
+if __name__ == "__main__":
+    app = create_app()
+    app.run(debug=True)
