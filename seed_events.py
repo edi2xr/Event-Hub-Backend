@@ -17,7 +17,8 @@ def seed_events():
                 venue="Nairobi Convention Center",
                 price=2500.0,
                 total_tickets=500,
-                available_tickets=500
+                available_tickets=500,
+                owner_phone="254712345678"
             ),
             Event(
                 name="Music Festival",
@@ -26,7 +27,8 @@ def seed_events():
                 venue="Uhuru Gardens",
                 price=1500.0,
                 total_tickets=1000,
-                available_tickets=1000
+                available_tickets=1000,
+                owner_phone="254712345678"
             ),
             Event(
                 name="Business Summit",
@@ -35,7 +37,8 @@ def seed_events():
                 venue="KICC",
                 price=3000.0,
                 total_tickets=200,
-                available_tickets=200
+                available_tickets=200,
+                owner_phone="254712345678"
             )
         ]
         
