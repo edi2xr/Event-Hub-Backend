@@ -27,9 +27,12 @@ def initiate_payment():
         return jsonify({'error': 'Not enough tickets available'}), 400
     
     # Calculate total amount with 5% commission
-    base_amount = event.price * data['quantity']
+    base_amount = float(event.price) * int(data['quantity'])
     commission = base_amount * 0.05
     total_amount = base_amount + commission
+    
+    # Round to nearest KES (M-Pesa doesn't accept decimals)
+    mpesa_amount = int(round(total_amount))
     
     # Create payment record
     payment = Payment(
@@ -45,7 +48,7 @@ def initiate_payment():
     try:
         mpesa_response = mpesa.stk_push(
             phone_number=data['phone_number'],
-            amount=total_amount,
+            amount=mpesa_amount,
             account_reference=f"EVENT{event.id}",
             transaction_desc=f"Ticket for {event.name}"
         )
