@@ -54,7 +54,8 @@ def create_app():
     CORS(app, origins=[
         "https://eventhub-4b919.firebaseapp.com",
         "https://eventhub-4b919.web.app",
-        "https://cationic-nonhabitually-joella.ngrok-free.dev"
+        "https://cationic-nonhabitually-joella.ngrok-free.dev",
+        "https://event-hub-backend-2.onrender.com"
     ], supports_credentials=True, allow_headers=["Content-Type", "Authorization", "ngrok-skip-browser-warning"],
     methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"])
     
