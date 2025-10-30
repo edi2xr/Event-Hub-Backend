@@ -45,10 +45,7 @@ def create_app():
     with app.app_context():
         upgrade()
     
-    CORS(app,support_credentials=True,origins= [
-        "https://eventhub-4b919.web.app",
-        "https://eventhub-4b919.firebaseapp.com"
-    ])
+    
 
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
@@ -57,7 +54,20 @@ def create_app():
     app.register_blueprint(club_bp, url_prefix='/api')
     app.register_blueprint(debug_bp, url_prefix='/api/debug')
     
-    
+    CORS(app, 
+     supports_credentials=True,
+     resources={
+         r"/api/*": {
+             "origins": [
+                 "http://localhost:3000",
+                 "https://eventhub-4b919.firebaseapp.com",
+                 "https://eventhub-4b919.web.app"
+             ],
+             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+             "allow_headers": ["Content-Type", "Authorization"],
+             "supports_credentials": True
+         }
+     })
     
     
     @jwt.expired_token_loader
