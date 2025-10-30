@@ -51,7 +51,7 @@ def create_app():
     app.register_blueprint(club_bp, url_prefix='/api')
     app.register_blueprint(debug_bp, url_prefix='/api/debug')
     
-    CORS(app)
+    CORS(app,support_credentials=True)
     
     
     @jwt.expired_token_loader
