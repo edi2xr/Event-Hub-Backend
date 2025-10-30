@@ -48,11 +48,11 @@ def create_app():
     app.register_blueprint(debug_bp, url_prefix='/api/debug')
     
     CORS(app, origins=[
-        "https://eventhub-4b919.web.app",
-        "http://localhost:5173",
         "https://eventhub-4b919.firebaseapp.com",
-        "https://event-hub-backend-2.onrender.com",
-    ], supports_credentials=True, allow_headers=["Content-Type", "Authorization", "ngrok-skip-browser-warning"])
+        "https://eventhub-4b919.web.app",
+        "https://cationic-nonhabitually-joella.ngrok-free.dev"
+    ], supports_credentials=True, allow_headers=["Content-Type", "Authorization", "ngrok-skip-browser-warning"],
+    methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"])
     
     
     @jwt.expired_token_loader
