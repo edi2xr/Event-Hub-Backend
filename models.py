@@ -169,7 +169,7 @@ class Event(db.Model):
     vip_price = db.Column(db.Float, nullable=True)
     vvip_price = db.Column(db.Float, nullable=True)
     max_attendees = db.Column(db.Integer, nullable=True)
-    banner_url = db.Column(db.String(500), nullable=True)
+    banner_url = db.Column(db.Text, nullable=True)
     renewal_period = db.Column(db.String(20), default='monthly')
     status = db.Column(db.Enum(EventStatus), default=EventStatus.PENDING, nullable=False)
     

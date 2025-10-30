@@ -54,6 +54,7 @@ def create_event():
             'event': new_event.to_dict()
         }), 201
     except Exception as e:
+        print(e)
         return jsonify({'error': 'Failed to create event'}), 500
 
 @events_bp.get('/public')

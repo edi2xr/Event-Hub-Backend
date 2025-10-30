@@ -76,6 +76,7 @@ def test_mpesa_payment():
             account_reference="TEST123",
             transaction_desc="Test Payment"
         )
+        print(mpesa_response)
         
         if mpesa_response.get('ResponseCode') == '0':
             return jsonify({
