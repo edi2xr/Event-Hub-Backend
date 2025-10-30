@@ -13,6 +13,7 @@ python-dotenv = "==1.0.0"
 werkzeug = "==2.3.7"
 psycopg2 = "*"
 requests = "*"
+gunicorn = "*"
 
 [dev-packages]
 
