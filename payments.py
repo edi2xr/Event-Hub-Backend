@@ -16,7 +16,7 @@ class MpesaService:
         self.consumer_secret = os.environ.get('MPESA_CONSUMER_SECRET', '8dXMT15CFXNTDsTNcKXtKxo4MI4Fhuf3egAgs4gydTkuTnVFQBhCl1pGHCmJevCX')
         self.business_short_code = os.environ.get('MPESA_SHORTCODE', '174379')
         self.passkey = os.environ.get('MPESA_PASSKEY', 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919')
-        self.callback_url = os.environ.get('MPESA_CALLBACK_URL', 'https://your-domain.com/api/payments/callback')
+        self.callback_url = os.environ.get('MPESA_CALLBACK_URL', 'https://https://event-hub-backend-2.onrender.com/api/payments/callback')
         self.base_url = 'https://sandbox.safaricom.co.ke'
 
     def get_access_token(self):

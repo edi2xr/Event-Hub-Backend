@@ -48,8 +48,10 @@ def create_app():
     app.register_blueprint(debug_bp, url_prefix='/api/debug')
     
     CORS(app, origins=[
+        "https://eventhub-4b919.web.app",
         "http://localhost:5173",
-        "http://127.0.0.1:5173"
+        "https://eventhub-4b919.firebaseapp.com",
+        "https://event-hub-backend-2.onrender.com",
     ], supports_credentials=True, allow_headers=["Content-Type", "Authorization", "ngrok-skip-browser-warning"])
     
     
