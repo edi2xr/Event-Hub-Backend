@@ -150,7 +150,7 @@ def payment_status(ticket_id):
 @payments_bp.post('/callback')
 def mpesa_callback():
     data = request.get_json()
-    
+    print(data)
     try:
         callback_data = data.get('Body', {}).get('stkCallback', {})
         result_code = callback_data.get('ResultCode')
