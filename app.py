@@ -9,19 +9,16 @@ from events import events_bp
 from payments import payments_bp
 from club_payments import club_bp
 from debug_events import debug_bp
-from models import User, UserRole
-from flask_migrate import upgrade
-
+from models.user import User
+from models import UserRole
+import club_models
 
 load_dotenv()
-
-
 
 def create_app():
     app = Flask(__name__)
     
-    
-    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
+    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///eventhub.db")
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     jwt_secret = os.getenv("JWT_SECRET_KEY")
     if not jwt_secret:
@@ -38,16 +35,10 @@ def create_app():
     app.config["JWT_COOKIE_PATH"] = "/"
     app.config["JWT_SESSION_COOKIE"] = False
     
-    
     db.init_app(app)
     jwt.init_app(app)
     migrate.init_app(app, db)
-    with app.app_context():
-        upgrade()
     
-    
-
-
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(events_bp, url_prefix='/api/events')
     app.register_blueprint(payments_bp, url_prefix='/api/payments')
@@ -69,7 +60,6 @@ def create_app():
          }
      })
     
-    
     @jwt.expired_token_loader
     def expired_token_callback(jwt_header, jwt_payload):
         return jsonify({'error': 'Token has expired'}), 401
@@ -81,9 +71,6 @@ def create_app():
     @jwt.unauthorized_loader
     def missing_token_callback(error):
         return jsonify({'error': 'Authorization token is required'}), 401
-    
-    
-    
     
     @app.route("/")
     def home():
@@ -108,7 +95,6 @@ def create_app():
     @app.route("/api/health")
     def health_check():
         try:
-            
             db.session.execute(db.text('SELECT 1'))
             return jsonify({"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()})
         except Exception as e:
@@ -129,7 +115,7 @@ if __name__ == "__main__":
                     admin = User(
                         username=os.getenv('ADMIN_USERNAME', 'admin'),
                         email=os.getenv('ADMIN_EMAIL', 'admin@eventhub.com'),
-                        role=UserRole.ADMIN
+                        role=UserRole.ADMIN.value
                     )
                     admin.set_password(admin_password)
                     admin.save()
@@ -137,36 +123,3 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"Error creating admin user: {e}")
     app.run(debug=True, port=8000, host="0.0.0.0")
-from flask import Flask
-from extensions import db, migrate, jwt, cors
-from API.admin import admin_bp
-import models  # ensures models are registered with SQLAlchemy
-
-def create_app():
-    app = Flask(__name__)
-
-    # Basic configuration
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///eventhub.db'
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['JWT_SECRET_KEY'] = 'super-secret-key'  # change this later
-
-    # Initialize extensions
-    db.init_app(app)
-    migrate.init_app(app, db)
-    jwt.init_app(app)
-    cors.init_app(app)
-
-    # Register blueprints
-    app.register_blueprint(admin_bp, url_prefix='/admin')
-
-    @app.route('/')
-    def home():
-        return {"message": "Welcome to Event Hub API 🎉"}
-
-    return app
-
-
-# Entry point
-if __name__ == "__main__":
-    app = create_app()
-    app.run(debug=True)

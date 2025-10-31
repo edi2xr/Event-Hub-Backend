@@ -52,7 +52,7 @@ class LuckyWinner(db.Model):
     id = db.Column(db.String(), primary_key=True, default=lambda: str(uuid4()))
     event_id = db.Column(db.String(), db.ForeignKey('events.id'), nullable=False)
     user_id = db.Column(db.String(), db.ForeignKey('users.id'), nullable=False)
-    ticket_id = db.Column(db.String(), db.ForeignKey('tickets.id'), nullable=True)
+    ticket_id = db.Column(db.String(), nullable=True)  # Removed FK constraint temporarily
     
     selected_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     ticket_sent = db.Column(db.Boolean, default=False)
