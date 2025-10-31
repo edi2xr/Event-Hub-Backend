@@ -43,7 +43,7 @@ coverage.xml
 *.sqlite3
 instance/
 .webassets-cache
-.env
+
 .venv
 env/
 venv/
