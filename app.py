@@ -3,7 +3,7 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 import os
 from datetime import datetime, timedelta, timezone
-from extension import db, jwt, migrate
+from extension import db, jwt, migrate, mail
 from auth import auth_bp
 from events import events_bp
 from payments import payments_bp
@@ -11,10 +11,10 @@ from club_payments import club_bp
 from debug_events import debug_bp
 from models import User, UserRole
 from flask_migrate import upgrade
+from flask_mail import Mail, Message
 
 
 load_dotenv()
-
 
 
 def create_app():
@@ -37,6 +37,16 @@ def create_app():
     app.config["JWT_COOKIE_SECURE"] = True
     app.config["JWT_COOKIE_PATH"] = "/"
     app.config["JWT_SESSION_COOKIE"] = False
+
+    # Flask-Mail configuration
+    app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
+    app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
+    app.config['MAIL_USE_TLS'] = True
+    app.config['MAIL_USE_SSL'] = False
+    app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+    app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+    app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', app.config['MAIL_USERNAME'])
+    mail.init_app(app)
     
     
     db.init_app(app)

@@ -7,10 +7,12 @@ from flask_jwt_extended import (
 )
 from functools import wraps
 from datetime import datetime
-from utils import validate_email, validate_password, validate_username, validate_json_input
+from utils import validate_email, validate_password, validate_username, validate_json_input, send_subscription_email
 import requests
+import logging
 
 auth_bp = Blueprint('auth', __name__)
+logger = logging.getLogger(__name__)
 
 def role_required(*allowed_roles):
     def decorator(f):
@@ -181,6 +183,8 @@ def subscribe_leader():
     try:
         user.activate_subscription()
         user.save()
+        # Send subscription success email
+        send_subscription_email(user.email, user.username)
     except Exception as e:
         return jsonify({'error': 'Failed to activate subscription'}), 500
     
@@ -330,3 +334,11 @@ def google_auth():
         return jsonify({'error': 'Failed to verify Google token'}), 500
     except Exception as e:
         return jsonify({'error': 'Authentication failed'}), 500
+
+@auth_bp.get('/welcome')
+def welcome():
+    """
+    Returns a welcome message and logs the request metadata
+    """
+    logger.info(f"Request received: {request.method} {request.path}")
+    return jsonify({'message': 'Welcome to the Event Hub API!'}), 200

@@ -11,7 +11,7 @@ flask-migrate = "==4.0.5"
 flask-cors = "==4.0.0"
 python-dotenv = "==1.0.0"
 werkzeug = "==2.3.7"
-psycopg2 = "*"
+psycopg2-binary = "*"
 requests = "*"
 gunicorn = "*"
 
