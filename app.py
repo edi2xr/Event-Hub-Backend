@@ -63,7 +63,7 @@ def create_app():
                  "https://eventhub-4b919.firebaseapp.com",
                  "https://eventhub-4b919.web.app"
              ],
-             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS","PATCH"],
              "allow_headers": ["Content-Type", "Authorization"],
              "supports_credentials": True
          }
